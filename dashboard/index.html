@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Robot IoT Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="icon-bot">🤖</div>
+                <h1>ROBO<span>AI</span></h1>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active"><i class="fas fa-th-large"></i> Dashboard</li>
+                    <li><i class="fas fa-brain"></i> Neural Logic</li>
+                    <li><i class="fas fa-map-marked-alt"></i> Mission Control</li>
+                    <li><i class="fas fa-cog"></i> Settings</li>
+                </ul>
+            </nav>
+            <div class="status-card">
+                <p>System Status</p>
+                <div id="connection-status" class="status-indicator offline">Disconnected</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <div class="search-bar">
+                    <input type="text" placeholder="Search robot fleet...">
+                </div>
+                <div class="user-profile">
+                    <div class="notifications"><span class="badge">3</span> 🔔</div>
+                    <div class="avatar">Admin</div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Top Stats -->
+                <div class="card stat-card">
+                    <h3>🔋 Battery</h3>
+                    <div class="progress-container">
+                        <div id="battery-level" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p id="battery-text">0%</p>
+                </div>
+                <div class="card stat-card">
+                    <h3>🌡️ Temperature</h3>
+                    <h2 id="temp-text">--°C</h2>
+                    <canvas id="tempChart" height="80"></canvas>
+                </div>
+                <div class="card stat-card">
+                    <h3>🏆 Success Rate</h3>
+                    <h2 id="success-count">0</h2>
+                    <p>Episodes completed</p>
+                </div>
+
+                <!-- Robot Map & Controls -->
+                <div class="card map-card grid-span-2">
+                    <div class="card-header">
+                        <h3>🗺️ Live Environment Map</h3>
+                        <div class="controls">
+                            <button id="start-btn" class="btn-primary">Start AI</button>
+                            <button id="stop-btn" class="btn-secondary">Emergency Stop</button>
+                            <button id="reset-btn" class="btn-outline">Reset</button>
+                        </div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="robotCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- AI Brain & Sensors -->
+                <div class="card sensor-card">
+                    <h3>📡 Sensor Fusion</h3>
+                    <div class="sensor-grid">
+                        <div class="sensor-item">
+                            <span>Ultrasonic N</span>
+                            <div class="sensor-bar"><div id="us-n" class="val"></div></div>
+                        </div>
+                        <div class="sensor-item">
+                            <span>Ultrasonic E</span>
+                            <div class="sensor-bar"><div id="us-e" class="val"></div></div>
+                        </div>
+                        <div class="sensor-item">
+                            <span>Ultrasonic S</span>
+                            <div class="sensor-bar"><div id="us-s" class="val"></div></div>
+                        </div>
+                        <div class="sensor-item">
+                            <span>Ultrasonic W</span>
+                            <div class="sensor-bar"><div id="us-w" class="val"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Log -->
+                <div class="card log-card">
+                    <h3>📝 AI Decision Log</h3>
+                    <div id="log-container" class="log-messages">
+                        <div class="log-entry system">Initializing neural network...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
