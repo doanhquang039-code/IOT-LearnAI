@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Management - Robot IoT</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fleet.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="icon-bot">🤖</div>
+                <h1>ROBO<span>AI</span></h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                    <li><a href="ai-control.html"><i class="fas fa-brain"></i> AI Control</a></li>
+                    <li class="active"><a href="fleet.html"><i class="fas fa-robot"></i> Fleet Manager</a></li>
+                    <li><a href="analytics.html"><i class="fas fa-chart-line"></i> Analytics</a></li>
+                    <li><a href="settings.html"><i class="fas fa-cog"></i> Settings</a></li>
+                </ul>
+            </nav>
+            <div class="status-card">
+                <p>Fleet Status</p>
+                <div id="fleet-status" class="status-indicator online">
+                    <span id="active-robots">0</span> / <span id="total-robots">0</span> Active
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1>🤖 Fleet Management System</h1>
+                <div class="header-actions">
+                    <button id="add-robot-btn" class="btn-primary">➕ Add Robot</button>
+                    <button id="refresh-fleet-btn" class="btn-secondary">🔄 Refresh</button>
+                    <button id="emergency-stop-all-btn" class="btn-danger">🛑 Emergency Stop All</button>
+                </div>
+            </header>
+
+            <!-- Fleet Overview -->
+            <div class="fleet-overview">
+                <div class="overview-card">
+                    <div class="overview-icon">🤖</div>
+                    <div class="overview-content">
+                        <h3>Total Robots</h3>
+                        <div class="overview-value" id="overview-total">0</div>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <div class="overview-icon">✅</div>
+                    <div class="overview-content">
+                        <h3>Active</h3>
+                        <div class="overview-value" id="overview-active">0</div>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <div class="overview-icon">⚠️</div>
+                    <div class="overview-content">
+                        <h3>Warning</h3>
+                        <div class="overview-value" id="overview-warning">0</div>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <div class="overview-icon">❌</div>
+                    <div class="overview-content">
+                        <h3>Offline</h3>
+                        <div class="overview-value" id="overview-offline">0</div>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <div class="overview-icon">🔋</div>
+                    <div class="overview-content">
+                        <h3>Avg Battery</h3>
+                        <div class="overview-value" id="overview-battery">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fleet Map -->
+            <div class="card fleet-map-card">
+                <div class="card-header">
+                    <h3>🗺️ Fleet Location Map</h3>
+                    <div class="map-controls">
+                        <button class="btn-outline" id="zoom-in-btn">🔍+</button>
+                        <button class="btn-outline" id="zoom-out-btn">🔍-</button>
+                        <button class="btn-outline" id="center-map-btn">🎯 Center</button>
+                    </div>
+                </div>
+                <div class="map-container">
+                    <canvas id="fleetMapCanvas"></canvas>
+                    <div class="map-legend">
+                        <div class="legend-item"><span class="dot active"></span> Active</div>
+                        <div class="legend-item"><span class="dot warning"></span> Warning</div>
+                        <div class="legend-item"><span class="dot offline"></span> Offline</div>
+                        <div class="legend-item"><span class="dot charging"></span> Charging</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Robot List -->
+            <div class="card robot-list-card">
+                <div class="card-header">
+                    <h3>🤖 Robot Fleet</h3>
+                    <div class="list-controls">
+                        <input type="text" id="search-robot" placeholder="Search robots..." class="search-input">
+                        <select id="filter-status" class="filter-select">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="warning">Warning</option>
+                            <option value="offline">Offline</option>
+                            <option value="charging">Charging</option>
+                        </select>
+                        <select id="sort-by" class="filter-select">
+                            <option value="id">Sort by ID</option>
+                            <option value="battery">Sort by Battery</option>
+                            <option value="status">Sort by Status</option>
+                            <option value="tasks">Sort by Tasks</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="robot-grid" id="robot-grid">
+                    <!-- Robot cards will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Task Assignment -->
+            <div class="card task-card">
+                <h3>📋 Task Assignment</h3>
+                <div class="task-assignment">
+                    <div class="task-form">
+                        <div class="form-group">
+                            <label>Select Robot</label>
+                            <select id="task-robot-select" class="form-control">
+                                <option value="">-- Select Robot --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Task Type</label>
+                            <select id="task-type" class="form-control">
+                                <option value="patrol">Patrol</option>
+                                <option value="delivery">Delivery</option>
+                                <option value="inspection">Inspection</option>
+                                <option value="cleaning">Cleaning</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Target Location (X, Y)</label>
+                            <div class="location-inputs">
+                                <input type="number" id="task-x" placeholder="X" class="form-control">
+                                <input type="number" id="task-y" placeholder="Y" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select id="task-priority" class="form-control">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <button id="assign-task-btn" class="btn-success full-width">✅ Assign Task</button>
+                    </div>
+                    <div class="active-tasks">
+                        <h4>Active Tasks</h4>
+                        <div id="active-tasks-list" class="tasks-list">
+                            <!-- Active tasks will be listed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fleet Analytics -->
+            <div class="card analytics-card">
+                <h3>📊 Fleet Analytics</h3>
+                <div class="analytics-grid">
+                    <div class="chart-container">
+                        <h4>Battery Distribution</h4>
+                        <canvas id="batteryChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4>Task Completion Rate</h4>
+                        <canvas id="taskChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4>Robot Utilization</h4>
+                        <canvas id="utilizationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Robot Detail Modal -->
+    <div id="robot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🤖 Robot Details</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="robot-detail-content">
+                <!-- Robot details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="close-modal-btn">Close</button>
+                <button class="btn-primary" id="edit-robot-btn">Edit</button>
+                <button class="btn-danger" id="delete-robot-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Robot Modal -->
+    <div id="add-robot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Add New Robot</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-robot-form">
+                    <div class="form-group">
+                        <label>Robot ID</label>
+                        <input type="text" id="new-robot-id" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Robot Name</label>
+                        <input type="text" id="new-robot-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Robot Type</label>
+                        <select id="new-robot-type" class="form-control">
+                            <option value="patrol">Patrol Robot</option>
+                            <option value="delivery">Delivery Robot</option>
+                            <option value="inspection">Inspection Robot</option>
+                            <option value="cleaning">Cleaning Robot</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Position (X, Y)</label>
+                        <div class="location-inputs">
+                            <input type="number" id="new-robot-x" placeholder="X" class="form-control" value="0">
+                            <input type="number" id="new-robot-y" placeholder="Y" class="form-control" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancel-add-btn">Cancel</button>
+                <button class="btn-primary" id="confirm-add-btn">Add Robot</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="fleet.js"></script>
+</body>
+</html>
