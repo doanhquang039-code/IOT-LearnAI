@@ -393,7 +393,7 @@ class ComputerVisionSystem extends EventEmitter {
     getMapData() {
         return {
             landmarks: Array.from(this.landmarks.values()),
-            explored: Array.from(this.explored),
+            explored: Array.from(this.map.explored),
             obstacles: this.map.obstacles
         };
     }
@@ -546,7 +546,7 @@ class ComputerVisionSystem extends EventEmitter {
             recognizedFaces: this.recognizedFaces.size,
             landmarks: this.landmarks.size,
             gestures: this.gestures.size,
-            mapCoverage: this.explored.size / (this.map.width * this.map.height),
+            mapCoverage: this.map.explored.size / (this.map.width * this.map.height),
             robotPose: this.robotPose
         };
     }

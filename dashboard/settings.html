@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Robot IoT AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        .settings-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+        .settings-nav { display: flex; flex-direction: column; gap: 4px; }
+        .settings-nav-item {
+            padding: 11px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
+            color: #8090a8; transition: all .2s; display: flex; align-items: center; gap: 10px;
+            border: 1px solid transparent;
+        }
+        .settings-nav-item:hover { background: rgba(0,229,255,.08); color: #e0e0e0; }
+        .settings-nav-item.active { background: rgba(0,229,255,.12); color: #00e5ff; border-color: rgba(0,229,255,.3); }
+        .settings-panel { display: none; }
+        .settings-panel.active { display: block; }
+        .setting-section {
+            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px; padding: 24px; margin-bottom: 20px;
+        }
+        .setting-section h3 { color: #00e5ff; font-size: 15px; margin: 0 0 20px; display: flex; align-items: center; gap: 8px; }
+        .setting-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+        .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .setting-label { font-size: 14px; color: #e0e0e0; }
+        .setting-desc { font-size: 11px; color: #5a6a7a; margin-top: 2px; }
+        .toggle-switch { position: relative; width: 46px; height: 24px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-track {
+            position: absolute; inset: 0; background: rgba(255,255,255,.1); border-radius: 12px;
+            cursor: pointer; transition: .3s;
+        }
+        .toggle-track:before {
+            content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+            background: #fff; border-radius: 50%; transition: .3s;
+        }
+        input:checked + .toggle-track { background: rgba(0,229,255,.4); border: 1px solid #00e5ff; }
+        input:checked + .toggle-track:before { transform: translateX(22px); background: #00e5ff; }
+        .setting-input {
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px; padding: 8px 14px; color: #fff; font-size: 13px; width: 160px;
+        }
+        .setting-input:focus { outline: none; border-color: #00e5ff; }
+        .setting-select {
+            background: rgba(10,15,30,.9); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 13px; width: 180px; cursor: pointer;
+        }
+        .setting-range { width: 140px; accent-color: #00e5ff; }
+        .save-btn {
+            background: linear-gradient(135deg, #00e5ff, #0099cc); border: none; color: #000;
+            padding: 10px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;
+            transition: .2s;
+        }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,229,255,.4); }
+        .badge-online { background: rgba(0,255,136,.15); color: #00ff88; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-offline { background: rgba(255,77,77,.15); color: #ff4d4d; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .module-card {
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+            border-radius: 10px; padding: 16px; display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; transition: .2s;
+        }
+        .module-card:hover { border-color: rgba(0,229,255,.2); }
+        .module-info h4 { font-size: 14px; color: #e0e0e0; margin: 0 0 4px; }
+        .module-info p { font-size: 11px; color: #5a6a7a; margin: 0; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+        .stat-item { background: rgba(0,0,0,.2); border-radius: 8px; padding: 14px; }
+        .stat-item .val { font-size: 22px; font-weight: 700; color: #00e5ff; font-family: 'Orbitron'; }
+        .stat-item .lbl { font-size: 11px; color: #5a6a7a; margin-top: 4px; }
+        .log-entry { font-size: 12px; color: #8090a8; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-family: 'Courier New', monospace; }
+        .log-entry.info { color: #00e5ff; }
+        .log-entry.warn { color: #ffd60a; }
+        .log-entry.err { color: #ff4d4d; }
+        .firmware-bar { height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; margin: 8px 0; }
+        .firmware-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #00e5ff, #00ff88); }
+        .danger-zone { border-color: rgba(255,77,77,.3) !important; }
+        .danger-zone h3 { color: #ff4d4d !important; }
+        .btn-danger-outline { background: transparent; border: 1px solid rgba(255,77,77,.4); color: #ff4d4d; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: .2s; }
+        .btn-danger-outline:hover { background: rgba(255,77,77,.1); }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo"><div class="icon-bot">🤖</div><h1>ROBO<span>AI</span></h1></div>
+            <nav><ul>
+                <li><a href="index.html"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="ai-control.html"><i class="fas fa-brain"></i> AI Control</a></li>
+                <li><a href="fleet.html"><i class="fas fa-robot"></i> Fleet Manager</a></li>
+                <li><a href="analytics.html"><i class="fas fa-chart-line"></i> Analytics</a></li>
+                <li class="active"><a href="settings.html"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul></nav>
+            <div class="status-card">
+                <p>System Status</p>
+                <div id="sys-status" class="status-indicator online">Online</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>⚙️ System Settings</h1>
+                <div class="header-actions">
+                    <button class="save-btn" onclick="saveAllSettings()">💾 Save All</button>
+                </div>
+            </header>
+
+            <div class="settings-layout">
+                <!-- Left Nav -->
+                <div class="settings-nav">
+                    <div class="settings-nav-item active" onclick="switchPanel('general',this)">
+                        <i class="fas fa-sliders-h"></i> General
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('modules',this)">
+                        <i class="fas fa-cubes"></i> AI Modules
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('fleet',this)">
+                        <i class="fas fa-robot"></i> Fleet Config
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('network',this)">
+                        <i class="fas fa-network-wired"></i> Network
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('alerts',this)">
+                        <i class="fas fa-bell"></i> Alerts
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('system',this)">
+                        <i class="fas fa-server"></i> System Info
+                    </div>
+                    <div class="settings-nav-item" onclick="switchPanel('logs',this)">
+                        <i class="fas fa-file-alt"></i> Logs
+                    </div>
+                </div>
+
+                <!-- Right Panels -->
+                <div>
+                    <!-- General -->
+                    <div class="settings-panel active" id="panel-general">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-paint-brush"></i> Dashboard Appearance</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Dark Mode</div><div class="setting-desc">Always enabled for IOT dashboards</div></div>
+                                <label class="toggle-switch"><input type="checkbox" checked disabled><div class="toggle-track"></div></label>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Animations</div><div class="setting-desc">Enable UI micro-animations</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-animations" checked><div class="toggle-track"></div></label>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Compact View</div><div class="setting-desc">Reduce padding for more data density</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-compact"><div class="toggle-track"></div></label>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Color Theme</div></div>
+                                <select class="setting-select" id="opt-theme">
+                                    <option value="cyan">Cyan (Default)</option>
+                                    <option value="green">Matrix Green</option>
+                                    <option value="purple">Purple Wave</option>
+                                    <option value="orange">Solar Orange</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-section">
+                            <h3><i class="fas fa-sync"></i> Update Intervals</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Dashboard Refresh</div><div class="setting-desc">How often to update dashboard data</div></div>
+                                <select class="setting-select" id="opt-refresh">
+                                    <option value="500">500ms (Real-time)</option>
+                                    <option value="1000" selected>1s (Default)</option>
+                                    <option value="2000">2s (Battery save)</option>
+                                    <option value="5000">5s (Low bandwidth)</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Chart History Points</div><div class="setting-desc" id="hist-val-label">60 points</div></div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <input type="range" class="setting-range" id="opt-history" min="20" max="200" value="60" oninput="document.getElementById('hist-val-label').textContent=this.value+' points'">
+                                    <span style="color:#00e5ff;font-size:13px;width:30px" id="hist-display">60</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Modules -->
+                    <div class="settings-panel" id="panel-modules">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-brain"></i> AI Module Status</h3>
+                            <div class="module-card">
+                                <div class="module-info"><h4>👁️ Computer Vision</h4><p>SLAM, Object Detection, Face Recognition</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>🔧 Predictive Maintenance</h4><p>Anomaly detection, Failure prediction</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>⚡ Energy Optimizer</h4><p>Charging strategy, Power management</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>🐝 Swarm Intelligence</h4><p>PSO, ACO, ABC algorithms</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>🗣️ Natural Language Processing</h4><p>Voice commands, Intent parsing</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>🗺️ Autonomous Navigation</h4><p>A*, RRT, DWA path planning</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-info"><h4>🔬 Edge AI Processing</h4><p>Local inference, Real-time ML</p></div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span class="badge-online">● Online</span>
+                                    <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fleet Config -->
+                    <div class="settings-panel" id="panel-fleet">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-sliders-h"></i> Fleet Parameters</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Fleet Size</div><div class="setting-desc">Number of active robots</div></div>
+                                <input type="number" class="setting-input" id="fleet-size" value="5" min="1" max="50">
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Critical Battery Threshold</div><div class="setting-desc">Send to charge below this %</div></div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <input type="range" class="setting-range" id="opt-bat-threshold" min="5" max="50" value="20" oninput="this.nextElementSibling.textContent=this.value+'%'">
+                                    <span style="color:#ffd60a;font-size:13px;width:35px">20%</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Default Navigation Algorithm</div></div>
+                                <select class="setting-select" id="opt-nav-algo">
+                                    <option value="astar">A* (Optimal)</option>
+                                    <option value="rrt">RRT (Fast)</option>
+                                    <option value="dwa">DWA (Dynamic)</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Swarm Coordination</div><div class="setting-desc">Enable multi-robot coordination</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-swarm" checked><div class="toggle-track"></div></label>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Collision Avoidance</div><div class="setting-desc">Auto-avoid other robots and obstacles</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-collision" checked><div class="toggle-track"></div></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network -->
+                    <div class="settings-panel" id="panel-network">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-server"></i> Server Connection</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Server Host</div></div>
+                                <input type="text" class="setting-input" id="opt-host" value="localhost" style="width:200px">
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Server Port</div></div>
+                                <input type="number" class="setting-input" id="opt-port" value="3000">
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">WebSocket Status</div></div>
+                                <span id="ws-status" class="badge-online">● Connected</span>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Auto-Reconnect</div><div class="setting-desc">Reconnect on connection loss</div></div>
+                                <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div></label>
+                            </div>
+                        </div>
+                        <div class="setting-section">
+                            <h3><i class="fas fa-robot"></i> Python AI Brain</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">AI Brain URL</div></div>
+                                <input type="text" class="setting-input" id="opt-ai-url" value="http://localhost:5000" style="width:200px">
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">AI Brain Status</div></div>
+                                <span id="ai-status" class="badge-offline">● Offline</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts -->
+                    <div class="settings-panel" id="panel-alerts">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-bell"></i> Alert Thresholds</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Battery Warning</div></div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <input type="range" class="setting-range" min="10" max="60" value="25" oninput="this.nextElementSibling.textContent=this.value+'%'">
+                                    <span style="color:#ffd60a;font-size:13px;width:35px">25%</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Temperature Warning</div></div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <input type="range" class="setting-range" min="30" max="80" value="45" oninput="this.nextElementSibling.textContent=this.value+'°C'">
+                                    <span style="color:#ffd60a;font-size:13px;width:40px">45°C</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Health Warning</div></div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <input type="range" class="setting-range" min="10" max="80" value="40" oninput="this.nextElementSibling.textContent=this.value+'%'">
+                                    <span style="color:#ffd60a;font-size:13px;width:35px">40%</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Sound Alerts</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-sound"><div class="toggle-track"></div></label>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Browser Notifications</div></div>
+                                <label class="toggle-switch"><input type="checkbox" id="opt-notif"><div class="toggle-track"></div></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Info -->
+                    <div class="settings-panel" id="panel-system">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-info-circle"></i> System Information</h3>
+                            <div class="stat-grid">
+                                <div class="stat-item"><div class="val" id="sys-version">v3.0.0</div><div class="lbl">System Version</div></div>
+                                <div class="stat-item"><div class="val" id="sys-uptime">--</div><div class="lbl">Uptime</div></div>
+                                <div class="stat-item"><div class="val" id="sys-modules">7</div><div class="lbl">AI Modules</div></div>
+                                <div class="stat-item"><div class="val" id="sys-robots">5</div><div class="lbl">Fleet Size</div></div>
+                            </div>
+                        </div>
+                        <div class="setting-section">
+                            <h3><i class="fas fa-microchip"></i> Firmware</h3>
+                            <div style="margin-bottom:12px">
+                                <div style="display:flex;justify-content:space-between;font-size:13px;color:#8090a8">
+                                    <span>System Core</span><span style="color:#00e5ff">v3.0.0 ✅ Up to date</span>
+                                </div>
+                                <div class="firmware-bar"><div class="firmware-fill" style="width:100%"></div></div>
+                            </div>
+                            <div style="margin-bottom:12px">
+                                <div style="display:flex;justify-content:space-between;font-size:13px;color:#8090a8">
+                                    <span>AI Models</span><span style="color:#ffd60a">v2.8.1 → v3.0 available</span>
+                                </div>
+                                <div class="firmware-bar"><div class="firmware-fill" style="width:85%"></div></div>
+                            </div>
+                            <button onclick="showToast('🔄 Checking for updates...')" style="background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:#00e5ff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px">
+                                🔄 Check for Updates
+                            </button>
+                        </div>
+                        <div class="setting-section danger-zone">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Reset All Settings</div><div class="setting-desc">Restore factory defaults</div></div>
+                                <button class="btn-danger-outline" onclick="if(confirm('Reset all settings to factory defaults?')){showToast('♻️ Settings reset to defaults');}">Reset</button>
+                            </div>
+                            <div class="setting-row">
+                                <div><div class="setting-label">Clear All Data</div><div class="setting-desc">Delete all sensor history and logs</div></div>
+                                <button class="btn-danger-outline" onclick="if(confirm('Clear all data?')){showToast('🗑️ Data cleared');}">Clear Data</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logs -->
+                    <div class="settings-panel" id="panel-logs">
+                        <div class="setting-section">
+                            <h3><i class="fas fa-terminal"></i> System Logs
+                                <button onclick="clearLogs()" style="margin-left:auto;background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.3);color:#ff4d4d;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px">🗑️ Clear</button>
+                            </h3>
+                            <div id="log-container" style="max-height:400px;overflow-y:auto;font-size:12px"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

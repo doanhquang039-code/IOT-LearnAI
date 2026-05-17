@@ -1,4 +1,4 @@
-// AI Control Panel JavaScript
+﻿// AI Control Panel JavaScript
 
 // Socket.IO connection
 const socket = io('http://localhost:3000');
@@ -88,7 +88,7 @@ function initializeNetworkBuilder() {
         newLayer.innerHTML = `
             <span class="layer-type">Hidden Layer ${layerList.children.length - 1}</span>
             <input type="number" class="layer-size-input" value="64" min="16" max="512">
-            <button class="btn-remove">✕</button>
+            <button class="btn-remove">âœ•</button>
         `;
         
         // Insert before output layer
@@ -386,6 +386,7 @@ function updateChart(episode, reward) {
 function initializeWebSocket() {
     socket.on('connect', () => {
         logToConsole('Connected to server', 'system');
+        socket.emit('get-models');
     });
     
     socket.on('disconnect', () => {
@@ -402,6 +403,37 @@ function initializeWebSocket() {
         document.getElementById('ai-status').textContent = 'Idle';
         document.getElementById('ai-status').className = 'status-indicator offline';
     });
+
+    socket.on('training-started', (state) => {
+        isTraining = true;
+        if (state?.config?.episodes) totalEpisodes = state.config.episodes;
+        logToConsole('Server accepted training session', 'system');
+    });
+
+    socket.on('training-paused', () => {
+        logToConsole('Server paused training loop', 'warning');
+    });
+
+    socket.on('training-stopped', () => {
+        isTraining = false;
+        logToConsole('Server stopped training loop', 'warning');
+        document.getElementById('ai-status').textContent = 'Idle';
+        document.getElementById('ai-status').className = 'status-indicator offline';
+    });
+
+    socket.on('training-state', (state) => {
+        if (!state) return;
+        isTraining = Boolean(state.active && !state.paused);
+        currentEpisode = state.episode || 0;
+        if (state.config?.episodes) totalEpisodes = state.config.episodes;
+        if (state.models) renderModelList(state.models);
+    });
+
+    socket.on('model-list', renderModelList);
+    socket.on('model-saved', (model) => logToConsole(`Model saved on server: ${model.name}`, 'system'));
+    socket.on('model-loaded', (model) => logToConsole(`Model loaded: ${model.name}`, 'system'));
+    socket.on('model-deleted', (data) => logToConsole(`Model deleted: ${data.name}`, 'warning'));
+    socket.on('model-error', (err) => logToConsole(err.message || 'Model operation failed', 'error'));
 }
 
 function updateTrainingMetrics(data) {
@@ -445,3 +477,41 @@ function clearConsole() {
     const consoleLog = document.getElementById('console-log');
     consoleLog.innerHTML = '<div class="console-line system">[SYSTEM] Console cleared</div>';
 }
+
+function renderModelList(models = []) {
+    const list = document.querySelector('.model-list');
+    if (!list) return;
+
+    if (!models.length) {
+        list.innerHTML = '<div class="model-item"><div class="model-info"><span class="model-name">No saved models</span><span class="model-date">Start training and save a model</span></div></div>';
+        return;
+    }
+
+    list.innerHTML = models.map(model => `
+        <div class="model-item">
+            <div class="model-info">
+                <span class="model-name">${model.name}</span>
+                <span class="model-date">${model.date || ''} · ${model.algorithm || 'ai'} · ${model.episodes || 0} eps · ${model.score || '--'} score</span>
+            </div>
+            <div class="model-actions">
+                <button class="btn-load">📂 Load</button>
+                <button class="btn-delete">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.btn-load').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modelName = e.target.closest('.model-item').querySelector('.model-name').textContent;
+            loadModel(modelName);
+        });
+    });
+
+    list.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modelName = e.target.closest('.model-item').querySelector('.model-name').textContent;
+            deleteModel(modelName);
+        });
+    });
+}
+

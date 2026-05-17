@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IOT Robot AI System - Advanced Analytics Dashboard with real-time metrics, energy analytics, and predictive maintenance">
+    <title>Analytics — ROBO AI System</title>
+    <link rel="stylesheet" href="analytics.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-orb orb1"></div>
+        <div class="bg-orb orb2"></div>
+        <div class="bg-orb orb3"></div>
+    </div>
+
+    <div class="layout">
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">
+                    <span class="logo-main">ROBO<strong>AI</strong></span>
+                    <span class="logo-sub">v3.0 System</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item" id="nav-dashboard">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="analytics.html" class="nav-item active" id="nav-analytics">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Analytics</span>
+                    <span class="nav-badge new">NEW</span>
+                </a>
+                <a href="ai-control.html" class="nav-item" id="nav-ai">
+                    <span class="nav-icon">🧠</span>
+                    <span class="nav-label">AI Control</span>
+                </a>
+                <a href="fleet.html" class="nav-item" id="nav-fleet">
+                    <span class="nav-icon">🤖</span>
+                    <span class="nav-label">Fleet</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="conn-status" id="conn-indicator">
+                    <span class="conn-dot offline"></span>
+                    <span class="conn-text" id="conn-text">Connecting...</span>
+                </div>
+                <div class="uptime-display">
+                    Uptime: <span id="sys-uptime">0s</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main">
+            <!-- Header -->
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>📊 System Analytics</h1>
+                    <p>Real-time monitoring · Phase 3 Active</p>
+                </div>
+                <div class="header-actions">
+                    <div class="time-range-selector">
+                        <button class="range-btn active" data-range="live" id="btn-live">LIVE</button>
+                        <button class="range-btn" data-range="1h" id="btn-1h">1H</button>
+                        <button class="range-btn" data-range="24h" id="btn-24h">24H</button>
+                    </div>
+                    <div class="last-update">
+                        Updated: <span id="last-update">--:--:--</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ===== KPI CARDS ===== -->
+            <section class="kpi-grid" id="kpi-section">
+                <div class="kpi-card glow-cyan" id="kpi-robots">
+                    <div class="kpi-icon">🤖</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-active-robots">--</div>
+                        <div class="kpi-label">Active Robots</div>
+                        <div class="kpi-sub">of <span id="kpi-total-robots">5</span> fleet</div>
+                    </div>
+                    <div class="kpi-trend up" id="kpi-robots-trend">▲ 100%</div>
+                </div>
+
+                <div class="kpi-card glow-green" id="kpi-health">
+                    <div class="kpi-icon">💚</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-avg-health">--</div>
+                        <div class="kpi-label">Avg Fleet Health</div>
+                        <div class="kpi-sub">All components</div>
+                    </div>
+                    <div class="kpi-trend up" id="kpi-health-trend">▲ Good</div>
+                </div>
+
+                <div class="kpi-card glow-yellow" id="kpi-energy">
+                    <div class="kpi-icon">⚡</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-avg-battery">--</div>
+                        <div class="kpi-label">Avg Battery</div>
+                        <div class="kpi-sub">Fleet average</div>
+                    </div>
+                    <div class="kpi-trend" id="kpi-battery-trend">→ Stable</div>
+                </div>
+
+                <div class="kpi-card glow-purple" id="kpi-ai">
+                    <div class="kpi-icon">🎯</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-objects">--</div>
+                        <div class="kpi-label">Objects Detected</div>
+                        <div class="kpi-sub">Total by CV system</div>
+                    </div>
+                    <div class="kpi-trend up" id="kpi-objects-trend">▲ Growing</div>
+                </div>
+
+                <div class="kpi-card glow-red" id="kpi-alerts">
+                    <div class="kpi-icon">🔔</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-alerts-count">--</div>
+                        <div class="kpi-label">Active Alerts</div>
+                        <div class="kpi-sub">Maintenance & energy</div>
+                    </div>
+                    <div class="kpi-trend" id="kpi-alerts-trend">→ Monitor</div>
+                </div>
+
+                <div class="kpi-card glow-blue" id="kpi-paths">
+                    <div class="kpi-icon">🗺️</div>
+                    <div class="kpi-body">
+                        <div class="kpi-value" id="kpi-paths-count">--</div>
+                        <div class="kpi-label">Paths Computed</div>
+                        <div class="kpi-sub">A* &amp; RRT total</div>
+                    </div>
+                    <div class="kpi-trend up" id="kpi-paths-trend">▲ Active</div>
+                </div>
+            </section>
+
+            <!-- ===== CHARTS ROW 1 ===== -->
+            <section class="charts-row">
+                <!-- Battery Trend Chart -->
+                <div class="chart-card wide">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">⚡ Battery & Temperature Trend</h3>
+                            <p class="chart-sub">Real-time sensor history · Robot-001</p>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="dot cyan"></span> Battery %</span>
+                            <span class="legend-item"><span class="dot orange"></span> Temp °C</span>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="sensorChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Fleet Status Donut -->
+                <div class="chart-card narrow">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🤖 Fleet Status</h3>
+                    </div>
+                    <div class="chart-wrap donut-wrap">
+                        <canvas id="fleetStatusChart"></canvas>
+                    </div>
+                    <div class="donut-legend" id="fleet-donut-legend">
+                        <div class="donut-item"><span class="dot cyan"></span><span>Exploring</span><strong id="dl-exploring">--</strong></div>
+                        <div class="donut-item"><span class="dot green"></span><span>Charging</span><strong id="dl-charging">--</strong></div>
+                        <div class="donut-item"><span class="dot grey"></span><span>Idle</span><strong id="dl-idle">--</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== CHARTS ROW 2 ===== -->
+            <section class="charts-row">
+                <!-- Energy Dashboard -->
+                <div class="chart-card medium">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🔋 Energy Consumption</h3>
+                        <p class="chart-sub">Fleet power analytics</p>
+                    </div>
+                    <div class="energy-stats-grid">
+                        <div class="e-stat">
+                            <div class="e-icon">📊</div>
+                            <div class="e-val" id="e-consumed">--</div>
+                            <div class="e-lbl">Total Consumed (Wh)</div>
+                        </div>
+                        <div class="e-stat">
+                            <div class="e-icon">🔌</div>
+                            <div class="e-val" id="e-charged">--</div>
+                            <div class="e-lbl">Total Charged (Wh)</div>
+                        </div>
+                        <div class="e-stat highlight">
+                            <div class="e-icon">💰</div>
+                            <div class="e-val green-text" id="e-savings">--</div>
+                            <div class="e-lbl">Energy Savings (W)</div>
+                        </div>
+                        <div class="e-stat">
+                            <div class="e-icon">⚡</div>
+                            <div class="e-val" id="e-draw">--</div>
+                            <div class="e-lbl">Current Draw (W)</div>
+                        </div>
+                    </div>
+                    <div class="chart-wrap" style="height: 120px; margin-top:12px;">
+                        <canvas id="energyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Maintenance Health -->
+                <div class="chart-card medium">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🔧 Component Health</h3>
+                        <p class="chart-sub">Predictive maintenance · Fleet avg</p>
+                    </div>
+                    <div class="chart-wrap" style="height: 160px;">
+                        <canvas id="maintenanceChart"></canvas>
+                    </div>
+                    <div class="maintenance-alerts" id="maintenance-alerts">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- CV Stats -->
+                <div class="chart-card narrow">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🎥 Computer Vision</h3>
+                    </div>
+                    <div class="cv-stats">
+                        <div class="cv-metric">
+                            <span class="cv-label">Objects / cycle</span>
+                            <span class="cv-val" id="cv-obj">--</span>
+                        </div>
+                        <div class="cv-metric">
+                            <span class="cv-label">Total detected</span>
+                            <span class="cv-val" id="cv-total">--</span>
+                        </div>
+                        <div class="cv-metric">
+                            <span class="cv-label">SLAM Landmarks</span>
+                            <span class="cv-val" id="cv-landmarks">--</span>
+                        </div>
+                        <div class="cv-metric">
+                            <span class="cv-label">Robot Pose X</span>
+                            <span class="cv-val" id="cv-pose-x">--</span>
+                        </div>
+                        <div class="cv-metric">
+                            <span class="cv-label">Robot Pose Y</span>
+                            <span class="cv-val" id="cv-pose-y">--</span>
+                        </div>
+                    </div>
+                    <div class="chart-wrap" style="height:100px; margin-top: 12px;">
+                        <canvas id="cvChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== CHARTS ROW 3 ===== -->
+            <section class="charts-row">
+                <!-- Navigation Stats -->
+                <div class="chart-card medium">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🗺️ Navigation Analytics</h3>
+                        <p class="chart-sub">A* · RRT · DWA algorithms</p>
+                    </div>
+                    <div class="nav-stats-grid">
+                        <div class="nav-stat">
+                            <div class="nav-val" id="nav-paths">--</div>
+                            <div class="nav-lbl">Paths Computed</div>
+                        </div>
+                        <div class="nav-stat">
+                            <div class="nav-val" id="nav-avg-len">--</div>
+                            <div class="nav-lbl">Avg Path Length</div>
+                        </div>
+                        <div class="nav-stat">
+                            <div class="nav-val" id="nav-success">--</div>
+                            <div class="nav-lbl">Success Rate</div>
+                        </div>
+                        <div class="nav-stat">
+                            <div class="nav-val" id="nav-obstacles">--</div>
+                            <div class="nav-lbl">Obstacles</div>
+                        </div>
+                    </div>
+                    <div class="chart-wrap" style="height: 130px; margin-top: 12px;">
+                        <canvas id="navChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- NLP Command History -->
+                <div class="chart-card medium">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">🎤 NLP Command Center</h3>
+                            <p class="chart-sub">Voice &amp; text command processing</p>
+                        </div>
+                    </div>
+                    <div class="nlp-input-row">
+                        <input type="text" id="nlp-input" class="nlp-input" placeholder="Type a command... (e.g. 'move forward', 'di thẳng')" />
+                        <button class="nlp-send-btn" id="nlp-send" onclick="sendNLPCommand()">Send ▶</button>
+                    </div>
+                    <div class="nlp-stats-mini">
+                        <span>Total: <strong id="nlp-total">0</strong></span>
+                        <span>Confidence: <strong id="nlp-conf">--</strong></span>
+                    </div>
+                    <div class="nlp-history" id="nlp-history">
+                        <div class="nlp-entry system">🤖 NLP System ready. Type a command above.</div>
+                    </div>
+                </div>
+
+                <!-- Fleet Battery per Robot -->
+                <div class="chart-card narrow">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🔋 Fleet Battery</h3>
+                        <p class="chart-sub">Per-robot levels</p>
+                    </div>
+                    <div class="fleet-battery-list" id="fleet-battery-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== MAINTENANCE SCHEDULE TABLE ===== -->
+            <section class="table-section">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>🔧 Maintenance Schedule & Alerts</h3>
+                        <div class="table-badge" id="alert-badge">0 alerts</div>
+                    </div>
+                    <div class="table-wrap">
+                        <table id="maintenance-table">
+                            <thead>
+                                <tr>
+                                    <th>Robot ID</th>
+                                    <th>Component</th>
+                                    <th>Health</th>
+                                    <th>Status</th>
+                                    <th>Alert</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="maintenance-tbody">
+                                <tr><td colspan="6" style="text-align:center; opacity:0.5;">Loading data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="analytics.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Autonomous Navigation System
- * Advanced pathfinding với A*, RRT, Dynamic Window Approach
- * Obstacle avoidance và real-time replanning
+ * Advanced pathfinding vá»›i A*, RRT, Dynamic Window Approach
+ * Obstacle avoidance vÃ  real-time replanning
  */
 
 class AutonomousNavigation {
@@ -28,7 +28,7 @@ class AutonomousNavigation {
      */
     
     findPathAStar(start, goal) {
-        console.log(`🔍 A* pathfinding from (${start.x}, ${start.y}) to (${goal.x}, ${goal.y})`);
+        console.log(`ðŸ” A* pathfinding from (${start.x}, ${start.y}) to (${goal.x}, ${goal.y})`);
         
         const startTime = Date.now();
         
@@ -54,7 +54,7 @@ class AutonomousNavigation {
                 const path = this.reconstructPath(cameFrom, current);
                 const computeTime = Date.now() - startTime;
                 
-                console.log(`✅ Path found: ${path.length} waypoints in ${computeTime}ms`);
+                console.log(`âœ… Path found: ${path.length} waypoints in ${computeTime}ms`);
                 
                 return {
                     path: path,
@@ -94,7 +94,7 @@ class AutonomousNavigation {
             }
         }
         
-        console.log('❌ No path found');
+        console.log('âŒ No path found');
         return null;
     }
 
@@ -147,7 +147,7 @@ class AutonomousNavigation {
      */
     
     findPathRRT(start, goal, maxIterations = 1000) {
-        console.log(`🌳 RRT pathfinding from (${start.x}, ${start.y}) to (${goal.x}, ${goal.y})`);
+        console.log(`ðŸŒ³ RRT pathfinding from (${start.x}, ${start.y}) to (${goal.x}, ${goal.y})`);
         
         const startTime = Date.now();
         
@@ -179,7 +179,7 @@ class AutonomousNavigation {
                 const path = this.reconstructRRTPath(parent, newNode, start);
                 const computeTime = Date.now() - startTime;
                 
-                console.log(`✅ Path found: ${path.length} waypoints in ${computeTime}ms`);
+                console.log(`âœ… Path found: ${path.length} waypoints in ${computeTime}ms`);
                 
                 return {
                     path: path,
@@ -191,7 +191,7 @@ class AutonomousNavigation {
             }
         }
         
-        console.log('❌ No path found within max iterations');
+        console.log('âŒ No path found within max iterations');
         return null;
     }
 
@@ -233,11 +233,24 @@ class AutonomousNavigation {
 
     reconstructRRTPath(parent, current, start) {
         const path = [current];
+        const visited = new Set([this.posKey(current)]);
+        const maxDepth = parent.size + 1;
+        let depth = 0;
         
-        while (this.posKey(current) !== this.posKey(start)) {
-            current = parent.get(this.posKey(current));
-            if (!current) break;
+        while (this.posKey(current) !== this.posKey(start) && depth < maxDepth) {
+            const next = parent.get(this.posKey(current));
+            if (!next) break;
+
+            const key = this.posKey(next);
+            if (visited.has(key)) {
+                console.warn('RRT path reconstruction stopped because a parent cycle was detected');
+                break;
+            }
+
+            current = next;
+            visited.add(key);
             path.unshift(current);
+            depth += 1;
         }
         
         return path;
@@ -402,7 +415,7 @@ class AutonomousNavigation {
 
     /**
      * PATH SMOOTHING
-     * Làm mượt đường đi
+     * LÃ m mÆ°á»£t Ä‘Æ°á»ng Ä‘i
      */
     
     smoothPath(path, iterations = 10) {
@@ -556,7 +569,7 @@ module.exports = AutonomousNavigation;
 
 // Test
 if (require.main === module) {
-    console.log('🤖 Testing Autonomous Navigation System\n');
+    console.log('ðŸ¤– Testing Autonomous Navigation System\n');
     
     const nav = new AutonomousNavigation(50, 50);
     
@@ -610,5 +623,6 @@ if (require.main === module) {
     console.log(`   Paths computed: ${stats.totalPathsComputed}`);
     console.log();
     
-    console.log('✅ Autonomous Navigation System tested successfully!');
+    console.log('âœ… Autonomous Navigation System tested successfully!');
 }
+
